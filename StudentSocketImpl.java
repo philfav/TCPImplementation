@@ -51,7 +51,7 @@ class StudentSocketImpl extends BaseSocketImpl {
    */
   public synchronized void acceptConnection() throws IOException {
 	  System.out.println("accpetConnection called");
-	  D.registerListeningSocket(this.port, this);
+	  D.registerListeningSocket(this.localport, this);
   }
 
   
