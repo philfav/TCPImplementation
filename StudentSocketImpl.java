@@ -29,6 +29,9 @@ class StudentSocketImpl extends BaseSocketImpl {
     localport = D.getNextAvailablePort();
     
     D.registerConnection(address, this.port, port, this);
+    TCPPacket syn = new TCPPacket(this.port, port, 0, 0, false, true, false, 5, null);
+    
+    TCPWrapper.send(syn, address);
   }
   
   /**
@@ -36,6 +39,7 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @param p The packet that arrived
    */
   public synchronized void receivePacket(TCPPacket p){
+	  System.out.print(p.toString());
   }
   
   /** 
@@ -46,6 +50,7 @@ class StudentSocketImpl extends BaseSocketImpl {
    * Note that localport is already set prior to this being called.
    */
   public synchronized void acceptConnection() throws IOException {
+	  D.registerListeningSocket(this.port, this);
   }
 
   
