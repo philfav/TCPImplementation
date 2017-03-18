@@ -147,7 +147,7 @@ class Demultiplexer extends Thread {
             c.receivePacket( packet );
         }
         else if (packet.synFlag) { // if packet is a SYN to open connection
-
+        	System.out.println("Syn packet found");
             // if the connection wasnt found yet, then we check for
             // listening sockets - of course, the packet received had to
             // be a SYN for this search to be necessary.
