@@ -40,7 +40,7 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
     localport = D.getNextAvailablePort();
     seq = 5;
     
-    D.registerConnection(address, this.port, port, this);
+    D.registerConnection(address, this.localport, port, this);
     TCPPacket syn = new TCPPacket(this.localport, port, seq, 8, false, true, false, 5, null);
     
     TCPWrapper.send(syn, address);
