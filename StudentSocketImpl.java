@@ -16,6 +16,7 @@ class StudentSocketImpl extends BaseSocketImpl {
   private Demultiplexer D;
   private Timer tcpTimer;
   private State state;
+  private int seq;
 
 
   
@@ -34,14 +35,24 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @exception  IOException  if an I/O error occurs when attempting a
    *               connection.
    */
-  public synchronized void connect(InetAddress address, int port) throws IOException{
+  @Override
+public synchronized void connect(InetAddress address, int port) throws IOException{
     localport = D.getNextAvailablePort();
+    seq = 5;
     
     D.registerConnection(address, this.port, port, this);
-    TCPPacket syn = new TCPPacket(this.localport, port, 5, 0, false, true, false, 5, null);
+    TCPPacket syn = new TCPPacket(this.localport, port, seq, 8, false, true, false, 5, null);
     
     TCPWrapper.send(syn, address);
     printTransition(State.CLOSED, State.SYN_SENT);
+    
+    while (state != State.ESTABLISHED){
+    	try {
+			wait();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+    }
   }
   
   /**
@@ -49,16 +60,16 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @param p The packet that arrived
    */
   public synchronized void receivePacket(TCPPacket p){
-	  this.notifyAll();
 	  
 	  System.out.println(p.toString());
 	  
 	  switch (state){
 	  case LISTEN:
-		  if (!p.synFlag)
+		  if (!p.synFlag || p.ackFlag)
 			  break;
 		  
-		  TCPPacket synAck = new TCPPacket(localport, p.sourcePort, 8, p.seqNum + 1, true, true, false, 5, null);
+		  seq = p.ackNum;
+		  TCPPacket synAck = new TCPPacket(localport, p.sourcePort, seq, -2, true, true, false, 5, null);
 		  
 		  TCPWrapper.send(synAck, p.sourceAddr);
 		  printTransition(state, State.SYN_RCVD);
@@ -86,8 +97,21 @@ class StudentSocketImpl extends BaseSocketImpl {
 	case LAST_ACK:
 		break;
 	case SYN_RCVD:
+		if (!p.ackFlag)
+			break;
+		
+		printTransition(state, State.ESTABLISHED);
 		break;
 	case SYN_SENT:
+		if (!p.ackFlag || !p.synFlag)
+			break;
+		
+		TCPPacket ack = new TCPPacket(localport, p.sourcePort, -2, p.seqNum + 1, true, false, false, 5, null);
+		
+		TCPWrapper.send(ack, p.sourceAddr);
+		
+		printTransition(state, State.ESTABLISHED);
+		
 		break;
 	case TIME_WAIT:
 		break;
@@ -95,6 +119,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 		break;
 		  
 	  }
+	  
+	  this.notifyAll();
 	  
   }
   
@@ -105,10 +131,19 @@ class StudentSocketImpl extends BaseSocketImpl {
    * that will be returned, not the listening ServerSocket.
    * Note that localport is already set prior to this being called.
    */
-  public synchronized void acceptConnection() throws IOException {
+  @Override
+public synchronized void acceptConnection() throws IOException {
 	  System.out.println("accpetConnection called");
 	  D.registerListeningSocket(this.localport, this);
 	  printTransition(State.CLOSED, State.LISTEN);
+	  
+	  while (state != State.ESTABLISHED){
+		  try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+	    }
   }
 
   
@@ -122,7 +157,8 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @exception  IOException  if an I/O error occurs when creating the
    *               input stream.
    */
-  public InputStream getInputStream() throws IOException {
+  @Override
+public InputStream getInputStream() throws IOException {
     // project 4 return appIS;
     return null;
     
@@ -138,7 +174,8 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @exception  IOException  if an I/O error occurs when creating the
    *               output stream.
    */
-  public OutputStream getOutputStream() throws IOException {
+  @Override
+public OutputStream getOutputStream() throws IOException {
     // project 4 return appOS;
     return null;
   }
@@ -149,7 +186,8 @@ class StudentSocketImpl extends BaseSocketImpl {
    *
    * @exception  IOException  if an I/O error occurs when closing this socket.
    */
-  public synchronized void close() throws IOException {
+  @Override
+public synchronized void close() throws IOException {
   }
 
   /** 
@@ -169,7 +207,8 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @param ref Generic reference that can be used by the timer to return 
    * information.
    */
-  public synchronized void handleTimer(Object ref){
+  @Override
+public synchronized void handleTimer(Object ref){
 
     // this must run only once the last timer (30 second timer) has expired
     tcpTimer.cancel();
