@@ -11,10 +11,17 @@ class StudentSocketImpl extends BaseSocketImpl {
 
   private Demultiplexer D;
   private Timer tcpTimer;
+  private State state;
 
-
+  enum State {
+	  CLOSED, LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1, CLOSE_WAIT, FIN_WAIT_2, LAST_ACK, TIME_WAIT
+  }
+  
+  private final String[] stateText = {"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "FIN_WAIT_1", "CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK", "TIME_WAIT"};
+  
   StudentSocketImpl(Demultiplexer D) {  // default constructor
     this.D = D;
+    state = State.CLOSED;
   }
 
   /**
@@ -29,9 +36,10 @@ class StudentSocketImpl extends BaseSocketImpl {
     localport = D.getNextAvailablePort();
     
     D.registerConnection(address, this.port, port, this);
-    TCPPacket syn = new TCPPacket(this.port, port, 0, 0, false, true, false, 5, null);
+    TCPPacket syn = new TCPPacket(this.localport, port, 5, 0, false, true, false, 5, null);
     
     TCPWrapper.send(syn, address);
+    printTransition(State.CLOSED, State.SYN_SENT);
   }
   
   /**
@@ -39,7 +47,53 @@ class StudentSocketImpl extends BaseSocketImpl {
    * @param p The packet that arrived
    */
   public synchronized void receivePacket(TCPPacket p){
-	  System.out.print(p.toString());
+	  this.notifyAll();
+	  
+	  System.out.println(p.toString());
+	  
+	  switch (state){
+	  case LISTEN:
+		  if (!p.synFlag)
+			  break;
+		  
+		  TCPPacket synAck = new TCPPacket(localport, p.sourcePort, 8, p.seqNum + 1, true, true, false, 5, null);
+		  
+		  TCPWrapper.send(synAck, p.sourceAddr);
+		  printTransition(state, State.SYN_RCVD);
+		  
+		  try {
+			D.unregisterListeningSocket(localport, this);
+			D.registerConnection(p.sourceAddr, localport, p.sourcePort, this);
+		  } 
+		  catch (IOException e) {
+			e.printStackTrace();
+		  }
+		  
+		  break;
+		  
+	case CLOSED:
+		break;
+	case CLOSE_WAIT:
+		break;
+	case ESTABLISHED:
+		break;
+	case FIN_WAIT_1:
+		break;
+	case FIN_WAIT_2:
+		break;
+	case LAST_ACK:
+		break;
+	case SYN_RCVD:
+		break;
+	case SYN_SENT:
+		break;
+	case TIME_WAIT:
+		break;
+	default:
+		break;
+		  
+	  }
+	  
   }
   
   /** 
@@ -52,6 +106,7 @@ class StudentSocketImpl extends BaseSocketImpl {
   public synchronized void acceptConnection() throws IOException {
 	  System.out.println("accpetConnection called");
 	  D.registerListeningSocket(this.localport, this);
+	  printTransition(State.CLOSED, State.LISTEN);
   }
 
   
@@ -117,5 +172,10 @@ class StudentSocketImpl extends BaseSocketImpl {
     // this must run only once the last timer (30 second timer) has expired
     tcpTimer.cancel();
     tcpTimer = null;
+  }
+  
+  private void printTransition(State start, State end){
+	  System.out.println("!!! " + stateText[start.ordinal()] + "->" + stateText[end.ordinal()]);
+	  state = end;
   }
 }
