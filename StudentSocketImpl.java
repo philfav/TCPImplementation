@@ -9,13 +9,15 @@ class StudentSocketImpl extends BaseSocketImpl {
   //   protected int port;
   //   protected int localport;
 
+	enum State {
+		  CLOSED, LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1, CLOSE_WAIT, FIN_WAIT_2, LAST_ACK, TIME_WAIT
+	}
+	  
   private Demultiplexer D;
   private Timer tcpTimer;
   private State state;
 
-  enum State {
-	  CLOSED, LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1, CLOSE_WAIT, FIN_WAIT_2, LAST_ACK, TIME_WAIT
-  }
+
   
   private final String[] stateText = {"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "FIN_WAIT_1", "CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK", "TIME_WAIT"};
   
