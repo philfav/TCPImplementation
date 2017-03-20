@@ -10,17 +10,20 @@ class StudentSocketImpl extends BaseSocketImpl {
   //   protected int localport;
 
 	enum State {
-		  CLOSED, LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1, CLOSE_WAIT, FIN_WAIT_2, LAST_ACK, TIME_WAIT
+		  CLOSED, LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1, CLOSE_WAIT, FIN_WAIT_2, LAST_ACK, TIME_WAIT, CLOSING
 	}
 	  
   private Demultiplexer D;
   private Timer tcpTimer;
   private State state;
   private int seq;
+  private InetAddress connectedAddr;
+  private int connectedPort;
+  private int connectedSeq;
 
 
   
-  private final String[] stateText = {"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "FIN_WAIT_1", "CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK", "TIME_WAIT"};
+  private final String[] stateText = {"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "FIN_WAIT_1", "CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK", "TIME_WAIT", "CLOSING"};
   
   StudentSocketImpl(Demultiplexer D) {  // default constructor
     this.D = D;
@@ -61,7 +64,7 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
    */
   public synchronized void receivePacket(TCPPacket p){
 	  
-	  System.out.println(p.toString());
+	  TCPPacket response;
 	  
 	  switch (state){
 	  case LISTEN:
@@ -69,9 +72,11 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 			  break;
 		  
 		  seq = p.ackNum;
-		  TCPPacket synAck = new TCPPacket(localport, p.sourcePort, seq, -2, true, true, false, 5, null);
+		  connectedSeq = p.seqNum;
 		  
-		  TCPWrapper.send(synAck, p.sourceAddr);
+		  response = new TCPPacket(localport, p.sourcePort, seq, connectedSeq + 1, true, true, false, 5, null);
+		  
+		  TCPWrapper.send(response, p.sourceAddr);
 		  printTransition(state, State.SYN_RCVD);
 		  
 		  try {
@@ -84,36 +89,108 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		  
 		  break;
 		  
-	case CLOSED:
-		break;
-	case CLOSE_WAIT:
-		break;
 	case ESTABLISHED:
+		if (!p.finFlag)
+			break;
+		
+		response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
+		TCPWrapper.send(response, connectedAddr);
+		
+		printTransition(state, State.CLOSE_WAIT);
+		
 		break;
+		
 	case FIN_WAIT_1:
+		if (p.ackFlag)
+			printTransition(state, State.FIN_WAIT_2);
+		
+		else if (p.finFlag){
+			seq = p.ackNum;
+			connectedSeq = p.seqNum;
+			
+			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
+			
+			TCPWrapper.send(response, connectedAddr);
+			
+			printTransition(state, State.CLOSING);
+		}
+		
 		break;
 	case FIN_WAIT_2:
+		if (!p.finFlag)
+			break;
+		
+		response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
+		
+		TCPWrapper.send(response, connectedAddr);
+		
+		printTransition(state, State.TIME_WAIT);
+		
+		try {
+			Thread.sleep(30 * 1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		printTransition(state, State.CLOSED);
+		
 		break;
 	case LAST_ACK:
+		if (!p.ackFlag)
+			break;
+		
+		printTransition(state, State.TIME_WAIT);
+		
+		try {
+			Thread.sleep(30 * 1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		printTransition(state, State.CLOSED);
 		break;
 	case SYN_RCVD:
 		if (!p.ackFlag)
 			break;
 		
+		connectedAddr = p.sourceAddr;
+		connectedPort = p.sourcePort;
+		
 		printTransition(state, State.ESTABLISHED);
 		break;
+		
 	case SYN_SENT:
 		if (!p.ackFlag || !p.synFlag)
 			break;
 		
-		TCPPacket ack = new TCPPacket(localport, p.sourcePort, -2, p.seqNum + 1, true, false, false, 5, null);
+		connectedSeq = p.seqNum;
 		
-		TCPWrapper.send(ack, p.sourceAddr);
+		response = new TCPPacket(localport, p.sourcePort, -2, p.seqNum + 1, true, false, false, 5, null);
+		
+		TCPWrapper.send(response, p.sourceAddr);
+		
+		connectedAddr = p.sourceAddr;
+		connectedPort = p.sourcePort;
 		
 		printTransition(state, State.ESTABLISHED);
 		
 		break;
-	case TIME_WAIT:
+	case CLOSING:
+		if (!p.ackFlag)
+			break;
+		
+		printTransition(state, State.TIME_WAIT);
+		
+		try {
+			Thread.sleep(30 * 1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		printTransition(state, State.CLOSED);
 		break;
 	default:
 		break;
@@ -188,6 +265,16 @@ public OutputStream getOutputStream() throws IOException {
    */
   @Override
 public synchronized void close() throws IOException {
+	  
+	  TCPPacket fin = new TCPPacket(this.localport, this.connectedPort, seq, connectedSeq + 1, false, false, true, 5, null);
+	  TCPWrapper.send(fin, connectedAddr);
+	  
+	  if (state == State.ESTABLISHED)
+		  printTransition(state, State.FIN_WAIT_1);
+	  
+	  else if (state == State.CLOSE_WAIT)
+		  printTransition(state, State.LAST_ACK);
+	  
   }
 
   /** 
