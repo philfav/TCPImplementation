@@ -184,13 +184,14 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		
 		printTransition(state, State.TIME_WAIT);
 		
+		/*
 		try {
 			Thread.sleep(30 * 1000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		*/
 		printTransition(state, State.CLOSED);
 		break;
 	default:
@@ -276,7 +277,7 @@ public synchronized void close() throws IOException {
 	  else if (state == State.CLOSE_WAIT)
 		  printTransition(state, State.LAST_ACK);
 	  
-	  while (state != State.TIME_WAIT){
+	  while (state != State.CLOSED){
 		  try {
 			  wait();
 		  } catch (InterruptedException e) {
