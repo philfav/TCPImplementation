@@ -115,6 +115,15 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 			printTransition(state, State.CLOSING);
 		}
 		
+		
+	    while (state != State.CLOSED){
+	    	try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+	    }
+		
 		break;
 	case FIN_WAIT_2:
 		if (!p.finFlag)
