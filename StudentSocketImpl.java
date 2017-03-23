@@ -288,15 +288,9 @@ public synchronized void close() throws IOException {
 	  
 	  else if (state == State.CLOSE_WAIT)
 		  printTransition(state, State.LAST_ACK);
-	 /* 
-	  while (state != State.CLOSED){
-		  try {
-			  wait();
-		  } catch (InterruptedException e) {
-			  e.printStackTrace();
-		  }
-	  }
-	  */
+
+	  CloseThread closer = new CloseThread(this);
+	  closer.run();
   }
 
   /** 
@@ -327,5 +321,9 @@ public synchronized void handleTimer(Object ref){
   private void printTransition(State start, State end){
 	  System.out.println("!!! " + stateText[start.ordinal()] + "->" + stateText[end.ordinal()]);
 	  state = end;
+  }
+  
+  public State getState(){
+	  return state;
   }
 }
