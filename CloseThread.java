@@ -11,7 +11,7 @@ public class CloseThread extends Thread {
 		while (sock.getState() != StudentSocketImpl.State.CLOSED){
 			synchronized(sock){
 				try {
-					wait();
+					sock.wait();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
