@@ -116,14 +116,6 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		}
 		
 		
-	    while (state != State.CLOSED){
-	    	try {
-				wait();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-	    }
-		
 		break;
 	case FIN_WAIT_2:
 		if (!p.finFlag)
@@ -136,7 +128,7 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		printTransition(state, State.TIME_WAIT);
 		
 		try {
-			Thread.sleep(30 * 1000);
+			Thread.sleep(5 * 1000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -153,7 +145,7 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		
 		
 		try {
-			Thread.sleep(30 * 1000);
+			Thread.sleep(5 * 1000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -195,7 +187,7 @@ public synchronized void connect(InetAddress address, int port) throws IOExcepti
 		
 		
 		try {
-			Thread.sleep(30 * 1000);
+			Thread.sleep(5 * 1000);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
