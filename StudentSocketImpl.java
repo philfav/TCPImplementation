@@ -317,7 +317,9 @@ class StudentSocketImpl extends BaseSocketImpl {
 		lastPack = pack;
 		if (!pack.ackFlag)
 			createTimerTask(2000, null);
+		
 	}
+	
 	public State getState() {
 		return state;
 	}
