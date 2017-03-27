@@ -301,8 +301,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			printTransition(state, State.CLOSED);
 		
 		else{
-			TCPWrapper.send(lastPack, connectedAddr);
-			createTimerTask(2000, null);
+			sendPacket(lastPack, connectedAddr);
 		}
 		
 	}
