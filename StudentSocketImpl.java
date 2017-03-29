@@ -122,11 +122,12 @@ class StudentSocketImpl extends BaseSocketImpl {
 				tcpTimer = null;
 			}
 			
-			if (p.ackFlag){
+			else if (p.ackFlag){
 				printTransition(state, State.FIN_WAIT_2);
 				tcpTimer.cancel();
 				tcpTimer = null;
 			}
+			
 			else if (p.finFlag) {
 				seq = p.ackNum;
 				connectedSeq = p.seqNum;
