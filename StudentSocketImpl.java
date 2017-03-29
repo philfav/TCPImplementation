@@ -52,7 +52,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 		D.registerConnection(address, this.localport, port, this);
 		TCPPacket syn = new TCPPacket(this.localport, port, seq, 8, false, true, false, 5, null);
 
-		TCPWrapper.send(syn, address);
+		sendPacket(syn, connectedAddr);
+		
 		printTransition(State.CLOSED, State.SYN_SENT);
 
 		while (state != State.ESTABLISHED) {
@@ -85,7 +86,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			response = new TCPPacket(localport, p.sourcePort, seq, connectedSeq + 1, true, true, false, 5, null);
 
-			TCPWrapper.send(response, p.sourceAddr);
+			sendPacket(response, connectedAddr);
 			printTransition(state, State.SYN_RCVD);
 
 			try {
@@ -98,8 +99,10 @@ class StudentSocketImpl extends BaseSocketImpl {
 			break;
 
 		case ESTABLISHED:
-			if (!p.finFlag)
+			if (p.ackFlag && p.synFlag){
+				sendPacket(lastPack, connectedAddr);
 				break;
+			}
 
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
 			TCPWrapper.send(response, connectedAddr);
@@ -149,9 +152,14 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			break;
 		case SYN_RCVD:
-			if (!p.ackFlag)
+			if (!p.ackFlag && p.synFlag){
+				this.sendPacket(lastPack, connectedAddr);
 				break;
-
+			}
+			
+			tcpTimer.cancel();
+			tcpTimer = null;
+			
 			connectedPort = p.sourcePort;
 
 			printTransition(state, State.ESTABLISHED);
@@ -160,12 +168,15 @@ class StudentSocketImpl extends BaseSocketImpl {
 		case SYN_SENT:
 			if (!p.ackFlag || !p.synFlag)
 				break;
-
+			
+			tcpTimer.cancel();
+			tcpTimer = null;
+			
 			connectedSeq = p.seqNum;
 
 			response = new TCPPacket(localport, p.sourcePort, -2, p.seqNum + 1, true, false, false, 5, null);
 
-			TCPWrapper.send(response, p.sourceAddr);
+			sendPacket(response, connectedAddr);
 
 			connectedPort = p.sourcePort;
 
@@ -297,9 +308,15 @@ class StudentSocketImpl extends BaseSocketImpl {
 		tcpTimer = null;
 		
 		// this must run only once the last timer (30 second timer) has expired
-		if (state == State.TIME_WAIT)
+		if (state == State.TIME_WAIT){
 			printTransition(state, State.CLOSED);
-		
+			try {
+				D.unregisterConnection(connectedAddr, localport, connectedPort, this);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		else{
 			sendPacket(lastPack, connectedAddr);
 		}
@@ -314,7 +331,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 	private void sendPacket(TCPPacket pack, InetAddress addr){
 		TCPWrapper.send(pack, addr);
 		lastPack = pack;
-		if (!pack.ackFlag)
+		if (!pack.ackFlag || pack.synFlag)
 			createTimerTask(2000, null);
 		
 	}
