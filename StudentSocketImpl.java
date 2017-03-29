@@ -101,21 +101,25 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 		case ESTABLISHED:
 			if (p.ackFlag && p.synFlag){
+				tcpTimer.cancel();
+				tcpTimer = null;
 				sendPacket(lastPack, connectedAddr);
-				break;
 			}
-
-			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-			sendPacket(response, connectedAddr);
-
-			printTransition(state, State.CLOSE_WAIT);
-
+			
+			else if(p.finFlag){
+				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
+				sendPacket(response, connectedAddr);
+	
+				printTransition(state, State.CLOSE_WAIT);
+			}
+			
 			break;
 
 		case FIN_WAIT_1:
 			if (p.ackFlag && p.synFlag){
 				sendPacket(lastPack, connectedAddr);
-				break;
+				tcpTimer.cancel();
+				tcpTimer = null;
 			}
 			
 			if (p.ackFlag){
@@ -139,7 +143,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 		case FIN_WAIT_2:
 			if (!p.finFlag)
 				break;
-
+			
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
 			lastAck = response;
 			
@@ -152,28 +156,31 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			break;
 		case LAST_ACK:
-			if (p.finFlag){
+			if (p.finFlag)
 				sendPacket(lastAck, connectedAddr);
-				break;
+			
+			if (p.ackFlag){
+				tcpTimer.cancel();
+				tcpTimer = null;
+				
+				printTransition(state, State.TIME_WAIT);
+				createTimerTask(30, null);
 			}
-
-			printTransition(state, State.TIME_WAIT);
-
-			createTimerTask(30, null);
 
 			break;
 		case SYN_RCVD:
-			if (!p.ackFlag && p.synFlag){
+			if (!p.ackFlag && p.synFlag)
 				this.sendPacket(lastPack, connectedAddr);
-				break;
+			
+			else if (p.ackFlag){
+				tcpTimer.cancel();
+				tcpTimer = null;
+				
+				connectedPort = p.sourcePort;
+	
+				printTransition(state, State.ESTABLISHED);
 			}
 			
-			tcpTimer.cancel();
-			tcpTimer = null;
-			
-			connectedPort = p.sourcePort;
-
-			printTransition(state, State.ESTABLISHED);
 			break;
 
 		case SYN_SENT:
@@ -195,17 +202,18 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			break;
 		case CLOSING:
-			if (p.finFlag){
+			if (p.finFlag)
 				sendPacket(lastPack, connectedAddr);
-				break;
+			
+			else if (p.ackFlag){
+				tcpTimer.cancel();
+				tcpTimer = null;
+				
+				printTransition(state, State.TIME_WAIT);
+	
+				createTimerTask(30, null);
 			}
 			
-			tcpTimer.cancel();
-			tcpTimer = null;
-			
-			printTransition(state, State.TIME_WAIT);
-
-			createTimerTask(30, null);
 			break;
 			
 		case CLOSE_WAIT:
