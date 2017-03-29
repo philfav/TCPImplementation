@@ -81,7 +81,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 			if (!p.synFlag || p.ackFlag)
 				break;
 
-			seq = p.ackNum;
 			connectedSeq = p.seqNum;
 			connectedAddr = p.sourceAddr;
 
@@ -129,7 +128,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 				connectedSeq = p.seqNum;
 
 				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-				lastAck = response;
+				//lastAck = response;
 				
 				sendPacket(response, connectedAddr);
 
@@ -142,7 +141,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 				break;
 			
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-			lastAck = response;
+			//lastAck = response;
 			
 			sendPacket(response, connectedAddr);
 
@@ -302,8 +301,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 		TCPPacket fin = new TCPPacket(this.localport, this.connectedPort, seq, connectedSeq + 1, false, false, true, 5,
 				null);
 
-		
-		lastAck = lastPack;
 		
 		sendPacket(fin, connectedAddr);
 
