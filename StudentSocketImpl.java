@@ -100,11 +100,9 @@ class StudentSocketImpl extends BaseSocketImpl {
 			break;
 
 		case ESTABLISHED:
-			if (p.ackFlag && p.synFlag){
-				tcpTimer.cancel();
-				tcpTimer = null;
+			if (p.ackFlag && p.synFlag)
 				sendPacket(lastPack, connectedAddr);
-			}
+	
 			
 			else if(p.finFlag){
 				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
@@ -116,11 +114,9 @@ class StudentSocketImpl extends BaseSocketImpl {
 			break;
 
 		case FIN_WAIT_1:
-			if (p.ackFlag && p.synFlag){
-				sendPacket(lastPack, connectedAddr);
-				tcpTimer.cancel();
-				tcpTimer = null;
-			}
+			if (p.ackFlag && p.synFlag)
+				sendPacket(lastAck, connectedAddr);
+			
 			
 			else if (p.ackFlag){
 				printTransition(state, State.FIN_WAIT_2);
@@ -306,8 +302,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 		TCPPacket fin = new TCPPacket(this.localport, this.connectedPort, seq, connectedSeq + 1, false, false, true, 5,
 				null);
 
-		if (state == State.CLOSE_WAIT)
-			lastAck = lastPack;
+		
+		lastAck = lastPack;
 		
 		sendPacket(fin, connectedAddr);
 
