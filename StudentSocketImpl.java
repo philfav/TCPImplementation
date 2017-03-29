@@ -147,7 +147,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			printTransition(state, State.TIME_WAIT);
 
-			createTimerTask(30, null);
+			createTimerTask(30 * 1000, null);
 
 
 			break;
@@ -160,7 +160,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 				tcpTimer = null;
 				
 				printTransition(state, State.TIME_WAIT);
-				createTimerTask(30, null);
+				createTimerTask(30 * 1000, null);
 			}
 
 			break;
@@ -207,7 +207,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 				
 				printTransition(state, State.TIME_WAIT);
 	
-				createTimerTask(30, null);
+				createTimerTask(30 * 1000, null);
 			}
 			
 			break;
