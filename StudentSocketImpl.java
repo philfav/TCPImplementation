@@ -101,7 +101,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 		case ESTABLISHED:
 			if (p.ackFlag && p.synFlag)
-				sendPacket(lastPack, connectedAddr);
+				sendPacket(lastAck, connectedAddr);
 	
 			
 			else if(p.finFlag){
@@ -200,7 +200,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			break;
 		case CLOSING:
 			if (p.finFlag)
-				sendPacket(lastPack, connectedAddr);
+				sendPacket(lastAck, connectedAddr);
 			
 			else if (p.ackFlag){
 				tcpTimer.cancel();
@@ -215,7 +215,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			
 		case CLOSE_WAIT:
 			if (p.finFlag)
-				sendPacket(lastPack, connectedAddr);
+				sendPacket(lastAck, connectedAddr);
 			
 			break;
 			
@@ -366,10 +366,13 @@ class StudentSocketImpl extends BaseSocketImpl {
 	
 	private void sendPacket(TCPPacket pack, InetAddress addr){
 		TCPWrapper.send(pack, addr);
-		lastPack = pack;
-		if (!pack.ackFlag || pack.synFlag)
+		if (!pack.ackFlag || pack.synFlag){
+			lastPack = pack;
 			createTimerTask(2000, null);
+		}
 		
+		else
+			lastAck = pack;
 	}
 	
 	public State getState() {
