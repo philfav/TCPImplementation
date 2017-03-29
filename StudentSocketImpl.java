@@ -106,7 +106,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			}
 
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-			TCPWrapper.send(response, connectedAddr);
+			sendPacket(response, connectedAddr);
 
 			printTransition(state, State.CLOSE_WAIT);
 
