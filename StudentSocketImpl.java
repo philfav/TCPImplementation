@@ -22,6 +22,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 	private int connectedSeq;
 	//private HashMap timerMap;
 	private TCPPacket lastPack;
+	private TCPPacket lastAck;
 	
 	private final String[] stateText = { "CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED", "FIN_WAIT_1",
 			"CLOSE_WAIT", "FIN_WAIT_2", "LAST_ACK", "TIME_WAIT", "CLOSING" };
@@ -112,16 +113,24 @@ class StudentSocketImpl extends BaseSocketImpl {
 			break;
 
 		case FIN_WAIT_1:
-			if (p.ackFlag)
+			if (p.ackFlag && p.synFlag){
+				sendPacket(lastPack, connectedAddr);
+				break;
+			}
+			
+			if (p.ackFlag){
 				printTransition(state, State.FIN_WAIT_2);
-
+				tcpTimer.cancel();
+				tcpTimer = null;
+			}
 			else if (p.finFlag) {
 				seq = p.ackNum;
 				connectedSeq = p.seqNum;
 
 				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-
-				TCPWrapper.send(response, connectedAddr);
+				lastAck = response;
+				
+				sendPacket(response, connectedAddr);
 
 				printTransition(state, State.CLOSING);
 			}
@@ -132,19 +141,21 @@ class StudentSocketImpl extends BaseSocketImpl {
 				break;
 
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-
-			TCPWrapper.send(response, connectedAddr);
+			lastAck = response;
+			
+			sendPacket(response, connectedAddr);
 
 			printTransition(state, State.TIME_WAIT);
 
 			createTimerTask(30, null);
 
-			printTransition(state, State.CLOSED);
 
 			break;
 		case LAST_ACK:
-			if (!p.ackFlag)
+			if (p.finFlag){
+				sendPacket(lastAck, connectedAddr);
 				break;
+			}
 
 			printTransition(state, State.TIME_WAIT);
 
@@ -184,13 +195,29 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			break;
 		case CLOSING:
-			if (!p.ackFlag)
+			if (p.finFlag){
+				sendPacket(lastPack, connectedAddr);
 				break;
-
+			}
+			
+			tcpTimer.cancel();
+			tcpTimer = null;
+			
 			printTransition(state, State.TIME_WAIT);
 
 			createTimerTask(30, null);
 			break;
+			
+		case CLOSE_WAIT:
+			if (p.finFlag)
+				sendPacket(lastPack, connectedAddr);
+			
+			break;
+			
+		case TIME_WAIT:
+			if (p.finFlag)
+				sendPacket(lastAck, connectedAddr);
+			
 		default:
 			break;
 
@@ -269,7 +296,11 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 		TCPPacket fin = new TCPPacket(this.localport, this.connectedPort, seq, connectedSeq + 1, false, false, true, 5,
 				null);
-		TCPWrapper.send(fin, connectedAddr);
+
+		if (state == State.CLOSE_WAIT)
+			lastAck = lastPack;
+		
+		sendPacket(fin, connectedAddr);
 
 		if (state == State.ESTABLISHED)
 			printTransition(state, State.FIN_WAIT_1);
