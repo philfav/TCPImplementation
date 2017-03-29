@@ -343,6 +343,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 		// this must run only once the last timer (30 second timer) has expired
 		if (state == State.TIME_WAIT){
 			printTransition(state, State.CLOSED);
+			notifyAll();
 			try {
 				D.unregisterConnection(connectedAddr, localport, connectedPort, this);
 			} catch (IOException e) {

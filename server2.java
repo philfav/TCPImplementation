@@ -17,7 +17,7 @@ public class server2 {
 
       System.out.println("got socket "+connSock);
 
-      Thread.sleep(2*1000);
+      Thread.sleep(10*1000);
       connSock.close();
       sock.close();
     }
