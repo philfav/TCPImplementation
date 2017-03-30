@@ -9,8 +9,9 @@ public class client3 {
 	    }
 
 	    try{
+	    	TCPStart.start();
 		    for (int x = 0; x < 5; x++){
-		      TCPStart.start();
+		      
 		      
 		      Socket sock = new Socket(argv[0], Integer.parseInt(argv[1]));
 	

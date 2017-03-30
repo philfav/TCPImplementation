@@ -10,8 +10,9 @@ public class server3 {
 	    }
 
 	    try{
+	    	TCPStart.start();
 		    for (int x = 0; x < 5; x++){
-		      TCPStart.start();
+		      
 		      
 		      ServerSocket sock = new ServerSocket(Integer.parseInt(argv[0]));
 		      Socket connSock = sock.accept();
