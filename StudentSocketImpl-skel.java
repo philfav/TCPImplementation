@@ -20,7 +20,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 	private InetAddress connectedAddr;
 	private int connectedPort;
 	private int connectedSeq;
-	//private HashMap timerMap;
 	private TCPPacket lastPack;
 	private TCPPacket lastAck;
 	
@@ -30,7 +29,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 	StudentSocketImpl(Demultiplexer D) { // default constructor
 		this.D = D;
 		state = State.CLOSED;
-		//timerMap = new HashMap<State,TCPTimerTask>();
 	}
 
 	/**
@@ -128,20 +126,19 @@ class StudentSocketImpl extends BaseSocketImpl {
 				connectedSeq = p.seqNum;
 
 				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-				//lastAck = response;
-				
+
 				sendPacket(response, connectedAddr);
 
 				printTransition(state, State.CLOSING);
 			}
 
 			break;
+			
 		case FIN_WAIT_2:
 			if (!p.finFlag)
 				break;
 			
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
-			//lastAck = response;
 			
 			sendPacket(response, connectedAddr);
 
@@ -149,8 +146,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 
 			createTimerTask(30 * 1000, null);
 
-
 			break;
+			
 		case LAST_ACK:
 			if (p.finFlag)
 				sendPacket(lastAck, connectedAddr);
@@ -164,6 +161,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			}
 
 			break;
+			
 		case SYN_RCVD:
 			if (!p.ackFlag && p.synFlag)
 				this.sendPacket(lastPack, connectedAddr);
@@ -197,6 +195,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			printTransition(state, State.ESTABLISHED);
 
 			break;
+			
 		case CLOSING:
 			if (p.finFlag)
 				sendPacket(lastAck, connectedAddr);
@@ -222,6 +221,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 			if (p.finFlag)
 				sendPacket(lastAck, connectedAddr);
 			
+			break;
+			
 		default:
 			break;
 
@@ -240,7 +241,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 	 */
 	@Override
 	public synchronized void acceptConnection() throws IOException {
-		System.out.println("accpetConnection called");
 		D.registerListeningSocket(this.localport, this);
 		printTransition(State.CLOSED, State.LISTEN);
 
@@ -301,7 +301,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 		TCPPacket fin = new TCPPacket(this.localport, this.connectedPort, seq, connectedSeq + 1, false, false, true, 5,
 				null);
 
-		
 		sendPacket(fin, connectedAddr);
 
 		if (state == State.ESTABLISHED)
@@ -347,7 +346,6 @@ class StudentSocketImpl extends BaseSocketImpl {
 			try {
 				D.unregisterConnection(connectedAddr, localport, connectedPort, this);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
