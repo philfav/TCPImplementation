@@ -103,6 +103,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 	
 			
 			else if(p.finFlag){
+				seq = p.ackNum;
 				response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
 				sendPacket(response, connectedAddr);
 	
@@ -138,6 +139,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 		case FIN_WAIT_2:
 			if (!p.finFlag)
 				break;
+			
+			seq = p.ackNum;
 			
 			response = new TCPPacket(localport, p.sourcePort, -2, connectedSeq + 1, true, false, false, 5, null);
 			
@@ -184,7 +187,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 			
 			tcpTimer.cancel();
 			tcpTimer = null;
-			
+			seq = p.ackNum;
 			connectedSeq = p.seqNum;
 
 			response = new TCPPacket(localport, p.sourcePort, -2, p.seqNum + 1, true, false, false, 5, null);
