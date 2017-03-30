@@ -78,7 +78,8 @@ class StudentSocketImpl extends BaseSocketImpl {
 		case LISTEN:
 			if (!p.synFlag || p.ackFlag)
 				break;
-
+			
+			seq = p.ackNum;
 			connectedSeq = p.seqNum;
 			connectedAddr = p.sourceAddr;
 
@@ -364,7 +365,7 @@ class StudentSocketImpl extends BaseSocketImpl {
 		TCPWrapper.send(pack, addr);
 		if (!pack.ackFlag || pack.synFlag){
 			lastPack = pack;
-			createTimerTask(2000, null);
+			createTimerTask(1000, null);
 		}
 		
 		else
